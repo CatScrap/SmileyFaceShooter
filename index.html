@@ -19,16 +19,29 @@
 
 <canvas id="gameCanvas"></canvas>
 <div id="score" style="position:absolute;top:10px;left:10px;font-size:24px;color:black;">Score: 0</div>
+<div style="position:absolute;top:40px;left:10px;font-size:20px;color:black;">
+  Mode:
+  <select id="modeSelector">
+    <option value="single">Single</option>
+    <option value="multi">Multi</option>
+    <option value="timed">Timed</option>
+  </select>
+</div>
+<div id="timeDisplay" style="position:absolute;top:70px;left:10px;font-size:20px;color:black;">Last kill: 0s</div>
 
 <script>
   const canvas = document.getElementById('gameCanvas');
   const context = canvas.getContext('2d');
   const scoreDisplay = document.getElementById('score');
+  const modeSelector = document.getElementById('modeSelector');
+  const timeDisplay = document.getElementById('timeDisplay');
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
   let smileyFaces = [];
   let score = 0;
+  let mode = modeSelector.value;
+  let lastKillTimestamp = Date.now();
 
   class SmileyFace {
     constructor(x, y, radius, speedX, speedY) {
@@ -73,6 +86,26 @@
     }
   }
 
+  function initSmileyFaces() {
+    smileyFaces = [];
+    if (mode === 'multi') {
+      for (let i = 0; i < 5; i++) {
+        spawnSmileyFace();
+      }
+    } else {
+      spawnSmileyFace();
+    }
+  }
+
+  function setMode(newMode) {
+    mode = newMode;
+    score = 0;
+    scoreDisplay.textContent = `Score: ${score}`;
+    lastKillTimestamp = Date.now();
+    timeDisplay.textContent = 'Last kill: 0s';
+    initSmileyFaces();
+  }
+
   function spawnSmileyFace() {
     const radius = Math.random() * 30 + 20;
     const x = Math.random() * (canvas.width - radius * 2) + radius;
@@ -102,12 +135,20 @@
         smileyFaces.splice(index, 1);
         score++;
         scoreDisplay.textContent = `Score: ${score}`;
+        const now = Date.now();
+        const delta = (now - lastKillTimestamp) / 1000;
+        timeDisplay.textContent = `Last kill: ${delta.toFixed(2)}s`;
+        lastKillTimestamp = now;
         spawnSmileyFace();
       }
     });
   });
 
-  spawnSmileyFace();
+  modeSelector.addEventListener('change', function(e) {
+    setMode(e.target.value);
+  });
+
+  initSmileyFaces();
   scoreDisplay.textContent = `Score: ${score}`;
   animate();
 </script>
