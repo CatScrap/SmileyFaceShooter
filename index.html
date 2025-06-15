@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smiley Face Shooter Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      background-color: lightblue;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+<div id="score" style="position:absolute;top:10px;left:10px;font-size:24px;color:black;">Score: 0</div>
+
+<script>
+  const canvas = document.getElementById('gameCanvas');
+  const context = canvas.getContext('2d');
+  const scoreDisplay = document.getElementById('score');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  let smileyFaces = [];
+  let score = 0;
+
+  class SmileyFace {
+    constructor(x, y, radius, speedX, speedY) {
+      this.x = x;
+      this.y = y;
+      this.radius = radius;
+      this.speedX = speedX;
+      this.speedY = speedY;
+    }
+
+    draw() {
+      context.beginPath();
+      context.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+      context.fillStyle = 'yellow';
+      context.fill();
+      context.lineWidth = 3;
+      context.strokeStyle = 'black';
+      context.stroke();
+      context.beginPath();
+      context.arc(this.x - this.radius / 3, this.y - this.radius / 3, this.radius / 6, 0, Math.PI * 2, false);
+      context.arc(this.x + this.radius / 3, this.y - this.radius / 3, this.radius / 6, 0, Math.PI * 2, false);
+      context.fillStyle = 'black';
+      context.fill();
+      context.beginPath();
+      context.arc(this.x, this.y + this.radius / 6, this.radius / 3, 0, Math.PI, false);
+      context.stroke();
+    }
+
+    update() {
+      this.x += this.speedX;
+      this.y += this.speedY;
+
+      if (this.x + this.radius > canvas.width || this.x - this.radius < 0) {
+        this.speedX = -this.speedX;
+      }
+
+      if (this.y + this.radius > canvas.height || this.y - this.radius < 0) {
+        this.speedY = -this.speedY;
+      }
+
+      this.draw();
+    }
+  }
+
+  function spawnSmileyFace() {
+    const radius = Math.random() * 30 + 20;
+    const x = Math.random() * (canvas.width - radius * 2) + radius;
+    const y = Math.random() * (canvas.height - radius * 2) + radius;
+    const speedX = (Math.random() - 0.5) * 4;
+    const speedY = (Math.random() - 0.5) * 4;
+
+    smileyFaces.push(new SmileyFace(x, y, radius, speedX, speedY));
+  }
+
+  function animate() {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    smileyFaces.forEach((face, index) => {
+      face.update();
+    });
+    requestAnimationFrame(animate);
+  }
+
+  canvas.addEventListener('click', function(event) {
+    const clickX = event.clientX;
+    const clickY = event.clientY;
+
+    smileyFaces.forEach((face, index) => {
+      const distance = Math.hypot(clickX - face.x, clickY - face.y);
+
+      if (distance - face.radius < 1) {
+        smileyFaces.splice(index, 1);
+        score++;
+        scoreDisplay.textContent = `Score: ${score}`;
+        spawnSmileyFace();
+      }
+    });
+  });
+
+  spawnSmileyFace();
+  scoreDisplay.textContent = `Score: ${score}`;
+  animate();
+</script>
+
+</body>
+</html>
