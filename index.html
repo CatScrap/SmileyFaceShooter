@@ -19,16 +19,37 @@
 
 <canvas id="gameCanvas"></canvas>
 <div id="score" style="position:absolute;top:10px;left:10px;font-size:24px;color:black;">Score: 0</div>
+<div id="timer" style="position:absolute;top:40px;left:10px;font-size:24px;color:black;display:none;">Interval: 0s</div>
+<select id="mode" style="position:absolute;top:10px;right:10px;">
+  <option value="single">Single</option>
+  <option value="multi">Multi</option>
+  <option value="timed">Timed</option>
+  <option value="boxed">Boxed</option>
+</select>
 
 <script>
   const canvas = document.getElementById('gameCanvas');
   const context = canvas.getContext('2d');
   const scoreDisplay = document.getElementById('score');
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  const timerDisplay = document.getElementById('timer');
+  const modeSelect = document.getElementById('mode');
+  let mode = modeSelect.value;
+
+  function setCanvasSize() {
+    if (mode === 'boxed') {
+      canvas.width = 400;
+      canvas.height = 400;
+    } else {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+  }
+
+  setCanvasSize();
 
   let smileyFaces = [];
   let score = 0;
+  let lastKillTime = null;
 
   class SmileyFace {
     constructor(x, y, radius, speedX, speedY) {
@@ -73,8 +94,8 @@
     }
   }
 
-  function spawnSmileyFace() {
-    const radius = Math.random() * 30 + 20;
+  function spawnSmileyFace(min = 20, max = 50) {
+    const radius = Math.random() * (max - min) + min;
     const x = Math.random() * (canvas.width - radius * 2) + radius;
     const y = Math.random() * (canvas.height - radius * 2) + radius;
     const speedX = (Math.random() - 0.5) * 4;
@@ -102,12 +123,59 @@
         smileyFaces.splice(index, 1);
         score++;
         scoreDisplay.textContent = `Score: ${score}`;
-        spawnSmileyFace();
+
+        if (mode === 'timed') {
+          const now = performance.now();
+          if (lastKillTime !== null) {
+            const diff = ((now - lastKillTime) / 1000).toFixed(2);
+            timerDisplay.textContent = `Interval: ${diff}s`;
+          }
+          lastKillTime = now;
+        }
+
+        if (mode === 'multi') {
+          spawnSmileyFace();
+        } else if (mode === 'boxed') {
+          spawnSmileyFace(10, 20);
+        } else {
+          spawnSmileyFace();
+        }
       }
     });
   });
 
-  spawnSmileyFace();
+  function spawnInitialFaces() {
+    if (mode === 'multi') {
+      for (let i = 0; i < 5; i++) {
+        spawnSmileyFace();
+      }
+    } else if (mode === 'boxed') {
+      for (let i = 0; i < 3; i++) {
+        spawnSmileyFace(10, 20);
+      }
+    } else {
+      spawnSmileyFace();
+    }
+    if (mode === 'timed') {
+      timerDisplay.style.display = 'block';
+      lastKillTime = performance.now();
+    } else {
+      timerDisplay.style.display = 'none';
+    }
+  }
+
+  modeSelect.addEventListener('change', () => {
+    mode = modeSelect.value;
+    smileyFaces = [];
+    score = 0;
+    scoreDisplay.textContent = `Score: ${score}`;
+    timerDisplay.textContent = 'Interval: 0s';
+    lastKillTime = null;
+    setCanvasSize();
+    spawnInitialFaces();
+  });
+
+  spawnInitialFaces();
   scoreDisplay.textContent = `Score: ${score}`;
   animate();
 </script>
