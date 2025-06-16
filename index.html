@@ -19,21 +19,30 @@
 
 <canvas id="gameCanvas"></canvas>
 <div id="score" style="position:absolute;top:10px;left:10px;font-size:24px;color:black;">Score: 0</div>
-<div id="timer" style="position:absolute;top:40px;left:10px;font-size:24px;color:black;display:none;">Interval: 0s</div>
+<div id="countdown" style="position:absolute;top:40px;left:10px;font-size:24px;color:black;display:none;">Time Left: 30s</div>
 <select id="mode" style="position:absolute;top:10px;right:10px;">
   <option value="single">Single</option>
   <option value="multi">Multi</option>
   <option value="timed">Timed</option>
   <option value="boxed">Boxed</option>
 </select>
+<select id="difficulty" style="position:absolute;top:40px;right:10px;display:none;">
+  <option value="easy">Easy</option>
+  <option value="medium">Medium</option>
+  <option value="hard">Hard</option>
+</select>
 
 <script>
   const canvas = document.getElementById('gameCanvas');
   const context = canvas.getContext('2d');
   const scoreDisplay = document.getElementById('score');
-  const timerDisplay = document.getElementById('timer');
+  const countdownDisplay = document.getElementById('countdown');
   const modeSelect = document.getElementById('mode');
+  const difficultySelect = document.getElementById('difficulty');
   let mode = modeSelect.value;
+  let difficulty = difficultySelect.value;
+  let timeLeft = 30;
+  let timerInterval = null;
 
   function setCanvasSize() {
     if (mode === 'boxed') {
@@ -49,7 +58,6 @@
 
   let smileyFaces = [];
   let score = 0;
-  let lastKillTime = null;
 
   class SmileyFace {
     constructor(x, y, radius, speedX, speedY) {
@@ -94,14 +102,20 @@
     }
   }
 
-  function spawnSmileyFace(min = 20, max = 50) {
+  function spawnSmileyFace(min = 20, max = 50, speedMult = 1) {
     const radius = Math.random() * (max - min) + min;
     const x = Math.random() * (canvas.width - radius * 2) + radius;
     const y = Math.random() * (canvas.height - radius * 2) + radius;
-    const speedX = (Math.random() - 0.5) * 4;
-    const speedY = (Math.random() - 0.5) * 4;
+    const speedX = (Math.random() - 0.5) * 4 * speedMult;
+    const speedY = (Math.random() - 0.5) * 4 * speedMult;
 
     smileyFaces.push(new SmileyFace(x, y, radius, speedX, speedY));
+  }
+
+  function getSpeedMultiplier() {
+    if (difficulty === 'medium') return 1.5;
+    if (difficulty === 'hard') return 2;
+    return 1;
   }
 
   function animate() {
@@ -125,15 +139,8 @@
         scoreDisplay.textContent = `Score: ${score}`;
 
         if (mode === 'timed') {
-          const now = performance.now();
-          if (lastKillTime !== null) {
-            const diff = ((now - lastKillTime) / 1000).toFixed(2);
-            timerDisplay.textContent = `Interval: ${diff}s`;
-          }
-          lastKillTime = now;
-        }
-
-        if (mode === 'multi') {
+          spawnSmileyFace(20, 50, getSpeedMultiplier());
+        } else if (mode === 'multi') {
           spawnSmileyFace();
         } else if (mode === 'boxed') {
           spawnSmileyFace(10, 20);
@@ -153,15 +160,47 @@
       for (let i = 0; i < 3; i++) {
         spawnSmileyFace(10, 20);
       }
+    } else if (mode === 'timed') {
+      spawnSmileyFace(20, 50, getSpeedMultiplier());
     } else {
       spawnSmileyFace();
     }
     if (mode === 'timed') {
-      timerDisplay.style.display = 'block';
-      lastKillTime = performance.now();
+      countdownDisplay.style.display = 'block';
+      difficultySelect.style.display = 'block';
+      startTimedGame();
     } else {
-      timerDisplay.style.display = 'none';
+      countdownDisplay.style.display = 'none';
+      difficultySelect.style.display = 'none';
+      clearInterval(timerInterval);
     }
+  }
+
+  function startTimedGame() {
+    clearInterval(timerInterval);
+    timeLeft = 30;
+    countdownDisplay.textContent = `Time Left: ${timeLeft}s`;
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      countdownDisplay.textContent = `Time Left: ${timeLeft}s`;
+      if (timeLeft <= 0) {
+        endTimedGame();
+      }
+    }, 1000);
+  }
+
+  function endTimedGame() {
+    clearInterval(timerInterval);
+    countdownDisplay.textContent = 'Time Left: 0s';
+    const bestKey = `best_${difficulty}`;
+    const best = parseInt(localStorage.getItem(bestKey) || '0', 10);
+    let bestScore = best;
+    if (score > best) {
+      localStorage.setItem(bestKey, score);
+      bestScore = score;
+    }
+    alert(`Time's up! Score: ${score}. Personal Best (${difficulty}): ${bestScore}`);
+    smileyFaces = [];
   }
 
   modeSelect.addEventListener('change', () => {
@@ -169,10 +208,12 @@
     smileyFaces = [];
     score = 0;
     scoreDisplay.textContent = `Score: ${score}`;
-    timerDisplay.textContent = 'Interval: 0s';
-    lastKillTime = null;
     setCanvasSize();
     spawnInitialFaces();
+  });
+
+  difficultySelect.addEventListener('change', () => {
+    difficulty = difficultySelect.value;
   });
 
   spawnInitialFaces();
